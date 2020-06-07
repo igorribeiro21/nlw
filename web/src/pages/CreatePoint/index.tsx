@@ -1,4 +1,4 @@
-import React, { useEffect, useState, ChangeEvent,FormEvent } from 'react'
+import React, { useEffect, useState, ChangeEvent, FormEvent } from 'react'
 import './styles.css'
 import { Link, useHistory } from 'react-router-dom'
 import { FiArrowLeft } from 'react-icons/fi'
@@ -7,6 +7,7 @@ import { Map, TileLayer, Marker } from 'react-leaflet'
 import { LeafletMouseEvent } from 'leaflet'
 import api from '../../services/api'
 import axios from 'axios'
+import Dropzone from '../../components/Dropzone'
 
 interface Item {
     id: number,
@@ -38,14 +39,15 @@ const CreatePoint = () => {
         email: '',
         whatsapp: ''
     })
+    const [selectedFile, setSelectedFile] = useState<File>()
 
     const history = useHistory()
 
     useEffect(() => {
         navigator.geolocation.getCurrentPosition(position => {
-            const { latitude, longitude } = position.coords
+            //const { latitude, longitude } = position.coords
 
-            setinitialPosition([latitude, longitude])
+            setinitialPosition(initialPosition)
         })
     }, [])
     useEffect(() => {
@@ -100,34 +102,51 @@ const CreatePoint = () => {
     function handleSelectItem(id: number) {
         const alreadySelected = selectedItems.findIndex(item => item === id)
 
-        if(alreadySelected >= 0){
+        if (alreadySelected >= 0) {
             const filteredItems = selectedItems.filter(item => item !== id)
 
             setselectedItems(filteredItems)
-        }else{
-            setselectedItems([...selectedItems,id])
+        } else {
+            setselectedItems([...selectedItems, id])
         }
     }
 
-    async function handleSubmit(event:FormEvent ){
+    async function handleSubmit(event: FormEvent) {
         event.preventDefault()
 
-        const { name,email,whatsapp } = formData
+        const { name, email, whatsapp } = formData
         const uf = selectedUf
         const city = selectedCity
-        // const [latitude,longitude] = selectedPosition
-        const latitude = 20.5698661
-        const longitude = -47.3804479
+        const [latitude,longitude] = selectedPosition
+        // const latitude = 20.5698661
+        // const longitude = -47.3804479
         const items = selectedItems
 
-        const data = {name,email,whatsapp,uf,city,latitude,longitude,items}
+        // const data = {}
+        const data = new FormData()
+        data.append('name', name)
+        data.append('email', email)
+        data.append('whatsapp', whatsapp)
+        data.append('uf', uf)
+        data.append('city', city)
+        data.append('latitude', String(latitude))
+        data.append('longitude', String(longitude))
+        data.append('items', items.join(','))
 
-       await api.post('/points',data)
-       await api.get('http://localhost:3332/excel').then(res =>{
-           console.log(res)
-       }
+        if (selectedFile) {
+            data.append('image', selectedFile)
+        }
 
-       )
+
+
+
+
+        await api.post('/points', data)
+        await api.get('http://localhost:3332/excel').then(res => {
+            console.log(res)
+        }
+
+        )
 
         alert('Ponto de Coleta criado')
         history.push('/')
@@ -146,6 +165,8 @@ const CreatePoint = () => {
             </header>
             <form onSubmit={handleSubmit}>
                 <h1>Cadastro do  <br /> ponto de coleta</h1>
+
+                <Dropzone onFileUploaded={setSelectedFile} />
 
                 <fieldset>
                     <legend>
@@ -184,15 +205,15 @@ const CreatePoint = () => {
                         <h2>Endereço</h2>
                         <span>Selecione o endereço no mapa</span>
                     </legend>
-                    <div style={{width:200,height:200,maxHeight:200,maxWidth:200}}>
-                        {/* <Map center={initialPosition} zoom={15} onClick={handleMapCLick}>
+                    <div style={{ width: 200, height: 200, maxHeight: 200, maxWidth: 200 }}>
+                        <Map center={initialPosition} zoom={15} onClick={handleMapCLick}>
                             <TileLayer
                                 attribution='&amp;copy <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
                                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                             />
                             <Marker position={selectedPosition}>                               
                             </Marker>
-                        </Map> */}
+                        </Map>
                     </div>
                     <div className="field-group">
                         <div className="field">
